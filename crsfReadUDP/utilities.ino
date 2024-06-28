@@ -9,20 +9,14 @@
     #define STAssid     "crsfUDP"
     #define STApw       "password"         // Change me! Must be >= 8 chars   
 
-//#define WIFI_PROTOCOL 1    // TCP/IP
-    #define WIFI_PROTOCOL 2    // UDP 
-
     IPAddress AP_default_IP(192, 168, 4, 1);
     IPAddress AP_gateway(192, 168, 4, 1);
     IPAddress AP_mask(255, 255, 255, 0);
 
-    IPAddress localIP;                            // tcp and udp
-    IPAddress TCP_REMOTEIP(192, 168, 4, 1);       // when we connect to a server in tcp client mode, put the server IP here
+    IPAddress localIP;                   
 
     uint16_t  UDP_LOCALPORT = 14555;    // readPort - (default 14555) remote host (like MP and QGC) expects to send to this port
     uint16_t  UDP_REMOTEPORT = 14550;   // sendPort - (default 14550) remote host reads on this port
-    uint16_t  TCP_LOCALPORT = 5760;
-    uint16_t  TCP_REMOTEPORT = 5760;
 
     uint16_t  udp_read_port = 0;
     uint16_t  udp_send_port = 0;
@@ -45,8 +39,6 @@
     uint8_t active_udpremoteip_idx = 0;     // active remote ip 
     uint8_t active_client_obj_idx = 0;
 
-    WiFiClient *tcp_client[max_clients] = {NULL}; // pointers to TCP client objects
-    WiFiServer TCPserver(TCP_LOCALPORT);          // dummy TCP local port(changes on TCPserver.begin() ).
     IPAddress UDP_remoteIP(192, 168, 1, 255);     // default to broadcast unless (not defined UDP_Broadcast)
     IPAddress udpremoteip[max_clients];           // table of remote UDP client IPs
     WiFiUDP *udp_object[2] = {NULL};              // pointers to UDP objects for STA and AP modes
@@ -63,76 +55,13 @@
       log.println(UDP_REMOTEPORT);
     }
   }
-  //=================================================================================================
-  bool newOutboundTCPClient()
-  {
-    static uint8_t retry = 3;
-    WiFiClient newClient;
-    while (!newClient.connect(TCP_REMOTEIP, TCP_REMOTEPORT))
-    {
-      log.printf("Local outbound tcp client connect failed, retrying %d\n", retry);
-      retry--;
-      if (retry == 0)
-      {
-        log.println("Tcp client connect aborted!");
-        return false;
-      }
-      delay(4000);
-    }
-    active_client_obj_idx = 0; // reserve the first tcp client object for our single outbound session
-    tcp_client[0] = new WiFiClient(newClient);
-    log.print("Local tcp client connected to remote server IP:");
-    log.print(TCP_REMOTEIP);
-    log.print(" remote Port:");
-    log.println(TCP_REMOTEPORT);
 
-    return true;
-  }
   //==================================================
   void startWiFiTimer()
   {
     wifi_retry_millis = millis();
   }
-  //===============================     H a n d l e   I n B o u n d   T C P   C l i e n t s ( G C S   s i d e )
-  void serviceInboundTCPClients()
-  {
-    #if (WIFI_PROTOCOL == 1)  // TCP
-      if (wifiSuGood)
-      {
-        WiFiClient newClient = TCPserver.available(); // check if a new client wants to connect
-        if (newClient)
-        {
-          for (int i = 0; i < max_clients; ++i)
-          { // if connected add it into our connected tcp_client table
-            if (NULL == tcp_client[i])
-            {                                            // find first empty slot in table
-              tcp_client[i] = new WiFiClient(newClient); // create new client object to use
-              inbound_clientGood = true;
-              active_client_obj_idx = i;
-              log.printf("Remote tcp client %d connected\n", i + 1);
-              break;
-            }
-          }
-        }
-        for (int i = 0; i < max_clients; ++i)
-        { // check to see if any clients have disconnected
-          if (NULL != tcp_client[i])
-          {
-            if (!tcp_client[i])
-            {
-              delay(100);
-              tcp_client[i]->stop();
-              tcp_client[i] = NULL;
-              delay(100);
-              inbound_clientGood = false;
-              log.println("TCP client disconnected");
-            }
-            break;
-          }
-        }
-      }
-    #endif  
-  }
+ 
   //===================================================================
   String wifiStatusText(uint16_t wifi_status)
   {
@@ -205,7 +134,6 @@
     #if (WIFI_MODE == 2)  // STA                  // in ap_sta or sta modes only, check for disconnect from AP
     //  checkWiFiConnected(); // Handle disconnect/reconnect
     #endif
-    serviceInboundTCPClients(); // from GCS side
     // Report stations connected to/from our AP
     uint8_t AP_sta_count = WiFi.softAPgetStationNum();
     static uint8_t AP_prev_sta_count = 0;
@@ -214,10 +142,6 @@
     {
       AP_prev_sta_count = AP_sta_count;
       log.printf("Remote STA %d connected to our AP\n", AP_sta_count);
-      #if (WIFI_PROTOCOL == 1)  // TCP
-        if (!outbound_clientGood) // and we don't have an active tcp session, start a new session
-          outbound_clientGood = newOutboundTCPClient();
-      #endif
     }
     else if (AP_sta_count < AP_prev_sta_count)
     { // a device has disconnected from the AP
@@ -251,7 +175,7 @@
 
     WiFi.softAPConfig(AP_default_IP, AP_gateway, AP_mask);
 
-    localIP = WiFi.softAPIP(); // tcp and udp
+    localIP = WiFi.softAPIP();
 
     log.print("AP IP address: ");
     log.print(localIP);
@@ -267,17 +191,10 @@
       }
     }
     log.println("mDNS responder started");
+      // regular AP
+    udp_read_port = UDP_LOCALPORT;
+    udp_send_port = UDP_REMOTEPORT;
 
-    #if (WIFI_PROTOCOL == 1)  // TCP
-      TCPserver.begin(TCP_LOCALPORT); //  Server for TCP/IP traffic
-      log.printf("TCP/IP started, local IP:port %s:%d\n", localIP.toString().c_str(), TCP_LOCALPORT);
-    #endif
-
-    #if (WIFI_PROTOCOL == 2)  // UDP
-        // regular AP
-      udp_read_port = UDP_LOCALPORT;
-      udp_send_port = UDP_REMOTEPORT;
-    #endif
 
     // Start UDP Object
     WiFiUDP UDP_Object;
@@ -347,44 +264,32 @@
       }
       log.println("mDNS responder started");
 
-      localIP = WiFi.localIP(); // TCP and UDP
+      localIP = WiFi.localIP(); 
 
       UDP_remoteIP = localIP; // Initially broadcast on the subnet we are attached to. patch by Stefan Arbes.
       UDP_remoteIP[3] = 255;  // patch by Stefan Arbes
 
       log.print("Local IP address: ");
       log.print(localIP);
-      #if (WIFI_PROTOCOL == 1)      // TCP 
-        log.print("  port: ");
-        log.println(TCP_LOCALPORT); 
-      #else
-        log.println();
-      #endif
+      log.println();
 
       int16_t wifi_rssi = WiFi.RSSI();
       log.print("WiFi RSSI:");
       log.print(wifi_rssi);
       log.println(" dBm");
 
-      #if (WIFI_PROTOCOL == 1)  // TCP
-        TCPserver.begin(TCP_LOCALPORT); //  tcp server socket started
-        log.println("TCP server started");
-      #endif
-
-      #if (WIFI_PROTOCOL == 2)  // UDP
-        udp_read_port = UDP_REMOTEPORT;
-        udp_send_port = UDP_LOCALPORT; // so we swap read and send ports, local (read) becomes 14550
-        WiFiUDP UDP_STA_Object;
-        udp_object[0] = new WiFiUDP(UDP_STA_Object);
-        log.printf("Begin UDP using STA UDP object  read port:%d  send port:%d\n", udp_read_port, udp_send_port);
-        udp_object[0]->begin(udp_read_port); // there are 2 possible udp objects, STA [0]    and    AP [1]
-        UDP_remoteIP = localIP;
-        UDP_remoteIP[3] = 255; // broadcast until we know which ip to target
-        udpremoteip[1] = UDP_remoteIP; // [1] IPs reserved for GCS side
-        log.printf("UDP for STA started, local %s   remote %s\n", localIP.toString().c_str(),
-                  UDP_remoteIP.toString().c_str());
-      #endif
-      wifiSuGood = true;
+      udp_read_port = UDP_REMOTEPORT;
+      udp_send_port = UDP_LOCALPORT; // so we swap read and send ports, local (read) becomes 14550
+      WiFiUDP UDP_STA_Object;
+      udp_object[0] = new WiFiUDP(UDP_STA_Object);
+      log.printf("Begin UDP using STA UDP object  read port:%d  send port:%d\n", udp_read_port, udp_send_port);
+      udp_object[0]->begin(udp_read_port); // there are 2 possible udp objects, STA [0]    and    AP [1]
+      UDP_remoteIP = localIP;
+      UDP_remoteIP[3] = 255; // broadcast until we know which ip to target
+      udpremoteip[1] = UDP_remoteIP; // [1] IPs reserved for GCS side
+      log.printf("UDP for STA started, local %s   remote %s\n", localIP.toString().c_str(),
+                UDP_remoteIP.toString().c_str());
+    wifiSuGood = true;
     }  
     return true;
   }
