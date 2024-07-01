@@ -50,11 +50,7 @@ void printBuffer(uint8_t lth)
 void setup() {
   log.begin(115200);
   delay(2000);
-  log.println("Starting .....");
-  //delay(100);
-  //inSerial.begin(in_baud, SERIAL_8N1, in_rxPin, in_txPin, inInvert); 
-  //log.printf("inSerial baud:%u  rxPin:%u  txPin:%u  invert:%u\n", in_baud, in_rxPin, in_txPin, inInvert);
-  //delay(50);  
+  log.println("Starting ....."); 
   #if (WIFI_MODE == 1)  // AP
     startAccessPoint();
     log.println("Waiting for UDP clients to connect ...");

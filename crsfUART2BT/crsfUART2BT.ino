@@ -7,8 +7,8 @@
 
 char  btSlaveName[20] = "btslavename";
 
-#define log                   Serial     // USB / Serial 
-//#define inBaud            400000         // crsf Betaflight
+#define log               Serial         // USB / Serial 
+//#define inBaud          400000         // crsf Betaflight
 #define inBaud            115200         // crsf EdgeTx
 #define inSerial          Serial1        // General telemetry input  
 

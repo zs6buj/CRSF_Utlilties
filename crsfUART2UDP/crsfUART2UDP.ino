@@ -3,7 +3,7 @@
 //#define TELEMETRY_SOURCE  1  // BetaFlight/CF
 #define TELEMETRY_SOURCE  2  // EdgeTX/OpenTX
 
-#define WIFI_MODE   1  //AP
+//#define WIFI_MODE   1  //AP
 //#define WIFI_MODE   2  // STA
 
 #define log               Serial          // USB / Serial 
