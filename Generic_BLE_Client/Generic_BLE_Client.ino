@@ -107,7 +107,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks
 static void recordNotifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, 
                                         uint8_t* pData, size_t length, bool isNotify) {
   //store record value
-  Serial.printf("length:%u  ", length);
+  //Serial.printf("length:%u  ", length);
   msgBytes = pData;
   newMsg = true;
   newLen = length;
