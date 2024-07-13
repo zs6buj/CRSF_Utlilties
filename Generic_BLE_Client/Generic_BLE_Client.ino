@@ -29,11 +29,32 @@ const uint8_t notificationOn[] = {0x1, 0x0};
 const uint8_t notificationOff[] = {0x0, 0x0};
 
 //Variables to store record
-char* recordChar;
+uint8_t* msgBytes;
 
 //Flags to check whether new temperature and humidity readings are available
-boolean newRecord = false;
-boolean newHumidity = false;
+boolean newMsg = false;
+uint8_t newLen = 0;
+
+//========================================
+void printByte(byte b, char delimiter)
+{
+  if (b <= 0xf)
+    Serial.print("0");
+    Serial.print(b, HEX);
+    Serial.write(delimiter);
+}
+
+//========================================
+void printBytes(uint8_t *buf, uint8_t len)
+{
+  Serial.printf("len:%2u:", len);
+  for (int i = 0; i < len; i++)
+  {
+    printByte(buf[i], ' ');
+  }
+  Serial.println();
+}
+//========================================
 
 //Connect to the BLE Server that has the name, Service, and Characteristics
 bool connectToServer(BLEAddress pAddress) {
@@ -87,14 +108,18 @@ static void recordNotifyCallback(BLERemoteCharacteristic* pBLERemoteCharacterist
                                         uint8_t* pData, size_t length, bool isNotify) {
   //store record value
   Serial.printf("length:%u  ", length);
-  recordChar = (char*)pData;
-  newRecord = true;
+  msgBytes = pData;
+  newMsg = true;
+  newLen = length;
 }
 
 //function that prints the latest record
 void printReadings(){
-  Serial.print("Record:");
-  Serial.println(recordChar);
+  Serial.print("Message:");
+  printBytes(msgBytes, newLen);
+  Serial.print("  \"");
+  Serial.print((char*)msgBytes);
+  Serial.println("\"");
 }
 
 void setup() {
@@ -131,9 +156,9 @@ void loop() {
     doConnect = false;
   }
   //if new temperature readings are available, print in the OLED
-  if (newRecord)
+  if (newMsg)
   {
-    newRecord = false;
+    newMsg = false;
     printReadings();
   }
   delay(1000); // Delay a second between loops.
