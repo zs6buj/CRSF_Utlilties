@@ -5,8 +5,9 @@
 #include "BLEDevice.h"
 
 //#define SERVICE_UUID "91bad492-b950-4226-aa2b-4ede9fa42f59"
-#define SERVICE_UUID "0000fff0-0000-1000-8000-00805f9b34fb" // use me for Frsky Tandem
-#define CHARACTERISTIC_01_UUID "cba1d466-344c-4be3-ab3f-189f80dd7518"
+//#define CHARACTERISTIC_01_UUID "cba1d466-344c-4be3-ab3f-189f80dd7518"
+#define SERVICE_UUID "0000fff0-0000-1000-8000-00805f9b34fb"            // use me for Frsky Tandem
+#define CHARACTERISTIC_01_UUID "0000fff6-0000-1000-8000-00805f9b34fb"  // use me for Frsky Tandem
 #define bleServerName "Hello"  // use me for Frsky Tandem
 
 // BLE Service
