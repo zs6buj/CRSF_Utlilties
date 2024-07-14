@@ -45,7 +45,6 @@ void printByte(byte b, char delimiter)
     Serial.print(b, HEX);
     Serial.write(delimiter);
 }
-
 //========================================
 void printBytes(uint8_t *buf, uint8_t len)
 {
@@ -97,9 +96,9 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks
   {
     Serial.printf("Device:%s\n", advertisedDevice.toString().c_str());
     if (advertisedDevice.getName() == bleServerName) { //Check if the name of the advertiser matches
-      advertisedDevice.getScan()->stop(); //Scan can be stopped, we found what we are looking for
+      advertisedDevice.getScan()->stop(); //Scan can be stopped as we found what we are looking for
       pServerAddress = new BLEAddress(advertisedDevice.getAddress()); //Address of advertiser is the one we need
-      doConnect = true; //Set indicator, stating that we are ready to connect
+      doConnect = true; //Set indicator showing we are ready to connect
       Serial.printf("our device found, connecting to %S...\n", bleServerName);
     }
   }
@@ -113,15 +112,6 @@ static void recordNotifyCallback(BLERemoteCharacteristic* pBLERemoteCharacterist
   msgBytes = pData;
   newMsg = true;
   newLen = length;
-}
-
-//function that prints the latest record
-void printReadings(){
-  Serial.print("Message:");
-  printBytes(msgBytes, newLen);
-  Serial.print("  \"");
-  Serial.print((char*)msgBytes);
-  Serial.println("\"");
 }
 
 void setup() {
@@ -161,7 +151,11 @@ void loop() {
   if (newMsg)
   {
     newMsg = false;
-    printReadings();
+    Serial.print("Message:");
+    printBytes(msgBytes, newLen);
+    Serial.print("  \"");
+    Serial.print((char*)msgBytes);
+    Serial.println("\"");
   }
-  delay(1000); // Delay a second between loops.
+  delay(1); 
 }
